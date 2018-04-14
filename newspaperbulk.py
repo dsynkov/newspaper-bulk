@@ -92,30 +92,33 @@ def create_session(max_retries=0, backoff_factor=0):
 
 
 def get_text_from_url(url, session, cleanwriter, errorwriter, allow_redirects=False, verify=True):
+
+    url_idx = url[0]
+    url_str = url[1]
     
     try: 
-        response = session.get(url[1], allow_redirects=allow_redirects, verify=verify)
+        response = session.get(url_str, allow_redirects=allow_redirects, verify=verify)
         response.close()
 
     except (ConnectionError, InvalidSchema) as e:
-        errorwriter.writerow([url[1], e.__class__.__name__])
+        errorwriter.writerow([url_str, e.__class__.__name__])
         response = None
         
-        print("#"+str(url[0])+":", e.__class__.__name__, url[1])
+        print(("#%s:" % url_idx), e.__class__.__name__, url_str)
 
         pass 
         
     except (MissingSchema, TooManyRedirects, RetryError) as e:
-        errorwriter.writerow([url[1], e.__class__.__name__])
+        errorwriter.writerow([url_str, e.__class__.__name__])
         response = None
         
-        print("#"+str(url[0])+":", e.__class__.__name__, url[1])
+        print(("#%s:" % url_idx), e.__class__.__name__, url_str)
         
         pass 
     
     if response is not None:
         if response.ok:       
-            article = newspaper.Article(url[1])
+            article = newspaper.Article(url_str)
             article.download()
 
             # See https://github.com/codelucas/newspaper/blob/master/newspaper/article.py#L31
@@ -127,16 +130,16 @@ def get_text_from_url(url, session, cleanwriter, errorwriter, allow_redirects=Fa
                     article.text,
                     article.title,
                     article.keywords,
-                    url[1]
+                    url_str
                 ])
             
         else:   
-            errorwriter.writerow([url[1], response.status_code])
+            errorwriter.writerow([url_str, response.status_code])
             print("#%s: Error with status code %s for URL: %s"
-                  % (url[0], response.status_code, url[1]))
+                  % (url_idx, response.status_code, url_str))
             
     else:
-        print("%s is not a valid URL" % url[1])
+        print("%s is not a valid URL" % url_str)
 
 
 def target_task(q, session, cleanwriter, errorwriter, allow_redirects=False, verify=True):
