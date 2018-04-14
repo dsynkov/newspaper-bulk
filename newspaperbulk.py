@@ -72,18 +72,18 @@ def create_output_filename(name):
     return output_name_clean, output_name_error
 
 
-def create_session(allow_redirects=False, verify=True, max_retries=0, backoff_factor=0):
+def create_session(max_retries=0, backoff_factor=0):
     
     session = requests.Session()
     
     # See https://stackoverflow.com/questions/15431044/can-i-set-max-retries-for-requests-request/#35504626
-    retries = Retry(
-        total=max_retries,
-        backoff_factor=backoff_factor,
-        status_forcelist=[500, 502, 503, 504]
-    )
+    # retries = Retry(
+    #     total=max_retries,
+    #     backoff_factor=backoff_factor,
+    #     status_forcelist=[500, 502, 503, 504]
+    # )
     
-    adapter = HTTPAdapter(max_retries=0)
+    adapter = HTTPAdapter(max_retries=max_retries)
     
     session.mount('http://',  adapter)
     session.mount('https://', adapter)
@@ -140,18 +140,21 @@ def get_text_from_url(url, session, cleanwriter, errorwriter, allow_redirects=Fa
 
 
 def target_task(q, session, cleanwriter, errorwriter, allow_redirects=False, verify=True):
-    
-    url = q.get()
-    
-    get_text_from_url(
-        url, session, 
-        cleanwriter, 
-        errorwriter, 
-        allow_redirects=allow_redirects, 
-        verify=verify
-    )
-    
-    q.task_done()
+
+    while not q.empty():
+
+        url = q.get()
+
+        get_text_from_url(
+            url[1],
+            session,
+            cleanwriter,
+            errorwriter,
+            allow_redirects=allow_redirects,
+            verify=verify
+        )
+
+        q.task_done()
 
 
 def main():
@@ -182,8 +185,8 @@ def main():
     total_urls = len(urls)
     
     output_name_clean, output_name_error = create_output_filename(name)
-    
-    concurrent = total_urls
+
+    start_time = time.time()
     
     with open(output_name_clean, 'w', newline="", encoding='utf-8') as cleanfile, \
             open(output_name_error, 'w', newline="", encoding='utf-8') as errorfile:
@@ -193,15 +196,17 @@ def main():
         
         cleanwriter.writerow(['text', 'title', 'keywords', 'url'])
         errorwriter.writerow(['url', 'error'])
-        
-        q = Queue(concurrent * 2)
-        
-        start_time = time.time()
-        
-        for i in range(concurrent):
 
-            t = Thread(
-                target=target_task,
+        q = Queue(maxsize=0)
+
+        threads = min(100, total_urls)
+
+        for i in range(len(urls)):
+            q.put((i, urls[i]))
+
+        for i in range(threads):
+            thread = Thread(
+                target=get_text_from_url,
                 args=(
                     q, session,
                     cleanwriter,
@@ -210,18 +215,11 @@ def main():
                     args.unverified
                 )
             )
-                
-            t.daemon = True
-            t.start()
-        
-        try:
-            for url in urls:
-                q.put(url)
-                
-            q.join()
-            
-        except KeyboardInterrupt:
-            sys.exit(1)
+
+            thread.setDaemon(True)
+            thread.start()
+
+        q.join()
             
     successful_urls = clean_up_output(output_name_clean)
     success_rate = successful_urls / total_urls
@@ -230,8 +228,8 @@ def main():
     
     print('\nNewspaper scrape is complete.\n')
     
-    print('A total of %s out of %s articles have been collected (%s success rate) in %s seconds.'
-          % (successful_urls, total_urls, np.round(success_rate,decimals=2), np.round(end_time, decimals=2)))
+    print('A total of %s out of %s articles have been collected (%s success rate) in %s seconds.\n'
+          % (successful_urls, total_urls, np.round(success_rate, decimals=2), np.round(end_time, decimals=2)))
     
     
 if __name__ == '__main__':
