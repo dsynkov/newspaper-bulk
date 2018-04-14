@@ -31,17 +31,18 @@ def parse_input_file(filepath):
     name = os.path.basename(abspath).split('.')[0]
     
     if ext == '.xlsx' or ext == '.xls':
-       df   = pd.read_excel(abspath,header=None,columns='A')
-       urls = list(df.iloc[:,0])
+        df = pd.read_excel(abspath, header=None, columns='A')
+        urls = list(df.iloc[:, 0])
     
     elif ext == '.csv' or ext == '.txt':
-       urls = open(abspath, 'r').read().splitlines()
+        urls = open(abspath, 'r').read().splitlines()
        
     else:
         raise Exception("File must in be .csv, .txt, .xlsx, or .xls format.")
    
     return urls, name
-        
+
+
 def clean_up_output(filename):
     """Once Newspaper is done scraping, read the file back in, drop missing 
     observations in column 'text' and return the count of valid articles 
@@ -51,10 +52,11 @@ def clean_up_output(filename):
     
     df = pd.read_csv(filename).dropna(subset=['text'])
     
-    df.to_csv(filename,index=False)
+    df.to_csv(filename, index=False)
     
     return len(df)
-    
+
+
 def create_output_filename(name):
     """The output file will go in the 'exports' sub-directory, saved as the 
     [name] with '-contents.csv' appended. PurePosixPath should ensure functionality 
@@ -68,8 +70,9 @@ def create_output_filename(name):
     output_name_error = str(path / 'exports' / (name + "-error.csv"))
 
     return output_name_clean, output_name_error
-    
-def create_session(allow_redirects=False,verify=True,max_retries=0,backoff_factor=0):
+
+
+def create_session(allow_redirects=False, verify=True, max_retries=0, backoff_factor=0):
     
     session = requests.Session()
     
@@ -77,7 +80,7 @@ def create_session(allow_redirects=False,verify=True,max_retries=0,backoff_facto
     retries = Retry(
         total=max_retries,
         backoff_factor=backoff_factor,
-        status_forcelist=[500,502,503,504]
+        status_forcelist=[500, 502, 503, 504]
     )
     
     adapter = HTTPAdapter(max_retries=0)
@@ -86,26 +89,27 @@ def create_session(allow_redirects=False,verify=True,max_retries=0,backoff_facto
     session.mount('https://', adapter)
     
     return session
-   
+
+
 def get_text_from_url(url, session, cleanwriter, errorwriter, allow_redirects=False, verify=True):
     
     try: 
-        response = session.get(url,allow_redirects=allow_redirects,verify=verify)
+        response = session.get(url, allow_redirects=allow_redirects, verify=verify)
         response.close()
 
     except (ConnectionError, InvalidSchema) as e:
-        errorwriter.writerow([url,e.__class__.__name__])
+        errorwriter.writerow([url, e.__class__.__name__])
         response = None
         
-        print(e.__class__.__name__,url)
+        print(e.__class__.__name__, url)
         
         pass 
         
     except (MissingSchema, TooManyRedirects, RetryError) as e:
-        errorwriter.writerow([url,e.__class__.__name__])
+        errorwriter.writerow([url, e.__class__.__name__])
         response = None
         
-        print(e.__class__.__name__,url)
+        print(e.__class__.__name__, url)
         
         pass 
     
@@ -128,43 +132,51 @@ def get_text_from_url(url, session, cleanwriter, errorwriter, allow_redirects=Fa
             
         else:   
             errorwriter.writerow([url,response.status_code])
-            print("Error with status code %s for URL: %s" 
-                % (response.status_code, url))
+            print("Error with status code %s for URL: %s"
+                  % (response.status_code, url))
             
     else:
         print("%s is not a valid URL" % url)
-        
-def target_task(q, session, cleanwriter, errorwriter, allow_redirects=False, verify=True):
 
+
+def target_task(q, session, cleanwriter, errorwriter, allow_redirects=False, verify=True):
+    
     url = q.get()
     
-    get_text_from_url(url, session, cleanwriter, errorwriter, allow_redirects=allow_redirects, verify=verify)
+    get_text_from_url(
+        url, session, 
+        cleanwriter, 
+        errorwriter, 
+        allow_redirects=allow_redirects, 
+        verify=verify
+    )
     
     q.task_done()
-    
+
+
 def main():
     
     parser = argparse.ArgumentParser()
     
-    parser.add_argument('filepath',type=str,
+    parser.add_argument('filepath', type=str,
                         help='Enter the path of the .csv, .txt, .xlsx, or .xls file containing the URLs. \
                             If the file is not in your current directory, you must enter the absolute path.')
     
-    parser.add_argument('-r','--redirects',action='store_true',
-                        help='Choose whether or not to allow redirects (default "False").')
-	
-    parser.add_argument('-u','--unverified',action='store_false',
+    parser.add_argument('-r', '--redirects', action='store_true',
+                        help='Choose whether or not to allow redirects (default False).')
+
+    parser.add_argument('-u', '--unverified', action='store_false',
                         help='Select to allow unverified SSL certificates.')
                         
-    parser.add_argument('-m','--max_retries',type=int,default=0,
+    parser.add_argument('-m', '--max_retries', type=int, default=0,
                         help='Set the max number of retries (default 0 to fail on first retry).')
                         
-    parser.add_argument('-b','--backoff',type=float,default=0,
+    parser.add_argument('-b', '--backoff', type=float, default=0,
                         help='Set the backoff factor (default 0).')
     
     args = parser.parse_args()
     
-    session = create_session(args.max_retries,args.backoff)
+    session = create_session(args.max_retries, args.backoff)
     
     urls, name = parse_input_file(args.filepath)
     total_urls = len(urls)
@@ -173,28 +185,31 @@ def main():
     
     concurrent = total_urls
     
-    with open(output_name_clean,'w',newline="",encoding='utf-8') as cleanfile, open(output_name_error,'w',newline="",encoding='utf-8') as errorfile:
+    with open(output_name_clean, 'w', newline="", encoding='utf-8') as cleanfile, \
+            open(output_name_error, 'w', newline="", encoding='utf-8') as errorfile:
     
-        cleanwriter = csv.writer(cleanfile,dialect='excel')
-        errorwriter = csv.writer(errorfile,dialect='excel')
+        cleanwriter = csv.writer(cleanfile, dialect='excel')
+        errorwriter = csv.writer(errorfile, dialect='excel')
         
-        cleanwriter.writerow(['text','title','keywords','url'])
-        errorwriter.writerow(['url','error'])
+        cleanwriter.writerow(['text', 'title', 'keywords', 'url'])
+        errorwriter.writerow(['url', 'error'])
         
         q = Queue(concurrent * 2)
         
         start_time = time.time()
         
-        # See https://stackoverflow.com/questions/2632520/what-is-the-fastest-way-to-send-100-000-http-requests-in-python/2635066#2635066
         for i in range(concurrent):
 
-            t = Thread(target=target_task,args=(
-                    q, session, 
+            t = Thread(
+                target=target_task,
+                args=(
+                    q, session,
                     cleanwriter,
                     errorwriter,
                     args.redirects,
                     args.unverified
-                ))
+                )
+            )
                 
             t.daemon = True
             t.start()
@@ -209,15 +224,15 @@ def main():
             sys.exit(1)
             
     successful_urls = clean_up_output(output_name_clean)
-    success_rate    = successful_urls / total_urls
+    success_rate = successful_urls / total_urls
     
     end_time = time.time() - start_time
     
     print('\nNewspaper scrape is complete.\n')
     
-    print('A total of %s out of %s articles have been collected (%s success rate) in %s seconds.' 
-        % (successful_urls,total_urls,np.round(success_rate,decimals=2),np.round(end_time,decimals=2)))  
+    print('A total of %s out of %s articles have been collected (%s success rate) in %s seconds.'
+          % (successful_urls, total_urls, np.round(success_rate,decimals=2), np.round(end_time, decimals=2)))
     
     
-if __name__=='__main__':
+if __name__ == '__main__':
     main()
