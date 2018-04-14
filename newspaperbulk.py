@@ -94,28 +94,28 @@ def create_session(max_retries=0, backoff_factor=0):
 def get_text_from_url(url, session, cleanwriter, errorwriter, allow_redirects=False, verify=True):
     
     try: 
-        response = session.get(url, allow_redirects=allow_redirects, verify=verify)
+        response = session.get(url[1], allow_redirects=allow_redirects, verify=verify)
         response.close()
 
     except (ConnectionError, InvalidSchema) as e:
-        errorwriter.writerow([url, e.__class__.__name__])
+        errorwriter.writerow([url[1], e.__class__.__name__])
         response = None
         
-        print(e.__class__.__name__, url)
-        
+        print("#"+str(url[0])+":", e.__class__.__name__, url[1])
+
         pass 
         
     except (MissingSchema, TooManyRedirects, RetryError) as e:
-        errorwriter.writerow([url, e.__class__.__name__])
+        errorwriter.writerow([url[1], e.__class__.__name__])
         response = None
         
-        print(e.__class__.__name__, url)
+        print("#"+str(url[0])+":", e.__class__.__name__, url[1])
         
         pass 
     
     if response is not None:
         if response.ok:       
-            article = newspaper.Article(url)
+            article = newspaper.Article(url[1])
             article.download()
 
             # See https://github.com/codelucas/newspaper/blob/master/newspaper/article.py#L31
@@ -127,16 +127,16 @@ def get_text_from_url(url, session, cleanwriter, errorwriter, allow_redirects=Fa
                     article.text,
                     article.title,
                     article.keywords,
-                    url
+                    url[1]
                 ])
             
         else:   
-            errorwriter.writerow([url,response.status_code])
-            print("Error with status code %s for URL: %s"
-                  % (response.status_code, url))
+            errorwriter.writerow([url[1], response.status_code])
+            print("#%s: Error with status code %s for URL: %s"
+                  % (url[0], response.status_code, url[1]))
             
     else:
-        print("%s is not a valid URL" % url)
+        print("%s is not a valid URL" % url[1])
 
 
 def target_task(q, session, cleanwriter, errorwriter, allow_redirects=False, verify=True):
@@ -146,7 +146,7 @@ def target_task(q, session, cleanwriter, errorwriter, allow_redirects=False, ver
         url = q.get()
 
         get_text_from_url(
-            url[1],
+            url,
             session,
             cleanwriter,
             errorwriter,
@@ -201,12 +201,12 @@ def main():
 
         threads = min(100, total_urls)
 
-        for i in range(len(urls)):
+        for i in range(total_urls):
             q.put((i, urls[i]))
 
         for i in range(threads):
             thread = Thread(
-                target=get_text_from_url,
+                target=target_task,
                 args=(
                     q, session,
                     cleanwriter,
