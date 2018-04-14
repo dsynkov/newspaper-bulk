@@ -77,13 +77,13 @@ def create_session(max_retries=0, backoff_factor=0):
     session = requests.Session()
     
     # See https://stackoverflow.com/questions/15431044/can-i-set-max-retries-for-requests-request/#35504626
-    # retries = Retry(
-    #     total=max_retries,
-    #     backoff_factor=backoff_factor,
-    #     status_forcelist=[500, 502, 503, 504]
-    # )
+    retries = Retry(
+        total=max_retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=[500, 502, 503, 504]
+    )
     
-    adapter = HTTPAdapter(max_retries=max_retries)
+    adapter = HTTPAdapter(max_retries=retries)
     
     session.mount('http://',  adapter)
     session.mount('https://', adapter)
