@@ -3,7 +3,6 @@ import numpy as np
 import argparse
 import pathlib
 import time
-import sys
 import csv
 import os 
 
@@ -143,6 +142,9 @@ def get_text_from_url(url, session, cleanwriter, errorwriter, allow_redirects=Fa
 
 
 def target_task(q, session, cleanwriter, errorwriter, allow_redirects=False, verify=True):
+    """This 'target' function (the function that our threads will act on)_is just to ensure
+    that q.get(). get_text_from_url(), and q.task_done() are called within the same method,
+    smoothly and in that order."""
 
     while not q.empty():
 
