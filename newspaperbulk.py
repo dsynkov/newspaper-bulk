@@ -43,7 +43,8 @@ def parse_input_file(filepath):
 
 
 def clean_up_output(filename):
-    """Once Newspaper is done scraping, read the file back in, drop missing 
+    """
+    Once Newspaper is done scraping, read the file back in, drop missing
     observations in column 'text' and return the count of valid articles 
     retrieved. Then export a cleaned-up version of the file without any of the 
     blanks in the 'text' column.
@@ -57,7 +58,8 @@ def clean_up_output(filename):
 
 
 def create_output_filename(name):
-    """The output file will go in the 'exports' sub-directory, saved as the 
+    """
+    The output file will go in the 'exports' sub-directory, saved as the
     [name] with '-contents.csv' appended. PurePosixPath should ensure functionality 
     on both Windows and Linux (see https://docs.python.org/3/library/pathlib.html).
     A separate file ([name] + '-error.csv') will be created to log error URLs.
@@ -142,9 +144,11 @@ def get_text_from_url(url, session, cleanwriter, errorwriter, allow_redirects=Fa
 
 
 def target_task(q, session, cleanwriter, errorwriter, allow_redirects=False, verify=True):
-    """This 'target' function (the function that our threads will act on) is just to ensure
+    """
+    This 'target' function (the function that our threads will act on) is just to ensure
     that q.get(). get_text_from_url(), and q.task_done() are called within the same method,
-    smoothly and in that order."""
+    smoothly and in that order.
+    """
 
     while not q.empty():
 
