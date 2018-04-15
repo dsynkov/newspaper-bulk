@@ -142,7 +142,7 @@ def get_text_from_url(url, session, cleanwriter, errorwriter, allow_redirects=Fa
 
 
 def target_task(q, session, cleanwriter, errorwriter, allow_redirects=False, verify=True):
-    """This 'target' function (the function that our threads will act on)_is just to ensure
+    """This 'target' function (the function that our threads will act on) is just to ensure
     that q.get(). get_text_from_url(), and q.task_done() are called within the same method,
     smoothly and in that order."""
 
@@ -169,9 +169,12 @@ def main():
     parser.add_argument('filepath', type=str,
                         help='Enter the path of the .csv, .txt, .xlsx, or .xls file containing the URLs. \
                             If the file is not in your current directory, you must enter the absolute path.')
-    
+
+    parser.add_argument('-t', '--threads', type=int, default=100,
+                        help='Number of threads to launch (default 100).')
+
     parser.add_argument('-r', '--redirects', action='store_true',
-                        help='Choose whether or not to allow redirects (default False).')
+                        help='Select to allow redirects.')
 
     parser.add_argument('-u', '--unverified', action='store_false',
                         help='Select to allow unverified SSL certificates.')
@@ -204,7 +207,7 @@ def main():
 
         q = Queue(maxsize=0)
 
-        threads = min(100, total_urls)
+        threads = min(args.threads, total_urls)
 
         for i in range(total_urls):
             q.put((i, urls[i]))
